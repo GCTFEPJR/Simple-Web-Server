@@ -17,7 +17,7 @@ int main() {
     int numRead;
     time_t	rawtime;
     struct tm* timeinfo
-    char buffer[80];
+    char buffer[40];
     struct sockaddr_in servaddr;
     char buff[4096];
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -57,9 +57,19 @@ int main() {
         }
         time(&rawtime);
         timeinfo=localtime(&rawtime);
-        strftime(buffer,80,"%c",timeinfo);
+        strftime(buffer, sizeof(buffer),"%c",timeinfo);
         std:string response;
-        //response<<
+        response << "HTTP/1.1 200 OK" << std::endl
+            << "Date: " << buffer << std::endl
+            << "Server: Sws" << std::endl
+            << "Accept-Ranges: bytes" << std::endl
+            << "Content-Length: 7" << std::endl
+            << "Content-Type: text/plain" << std::endl
+            << std::endl
+            << "Hellow";
+
+        write(connfd,response.c_str(),response.size());
+
 
         // Close the connection
         close(connfd);
