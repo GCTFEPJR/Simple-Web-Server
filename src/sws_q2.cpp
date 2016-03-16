@@ -32,13 +32,13 @@ int main() {
     servaddr.sin_port = htons(8080);
 
     // Bind to the port
-    if (bind(listenfd, (struct sockaddr_in*) &servaddr, sizeof(servaddr))) {
+    if (bind(listenfd, (struct sockaddr*) &servaddr, sizeof(servaddr))) {
         perror("bind error");
         exit(1);
     }
 
     // Listen to a possible connnection to the given port
-    if (listen(listenfd, LISTENQ) < 0) {
+    if (listen(listenfd, 1024) < 0) {
         perror("listen");
         exit(1);
     }
@@ -46,7 +46,7 @@ int main() {
     // Answer the connection
     for (;;) {
         // Accept the connection
-        if ((connfd = accept(listenfd, (struct sockaddr_in*) NULL, NULL)) < 0) {
+        if ((connfd = accept(listenfd, (struct sockaddr*) NULL, NULL)) < 0) {
             perror("accept errror");
             exit(1);
         }
