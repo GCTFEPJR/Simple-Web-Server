@@ -1,7 +1,3 @@
-//
-// Created by thomas on 16/03/16.
-//
-
 #include <iostream>
 #include <stdio.h>
 #include <sys/types.h>
@@ -19,6 +15,9 @@ using namespace std;
 int main() {
     int listenfd,connfd;
     int numRead;
+    time_t	rawtime;
+    struct tm* timeinfo
+    char buffer[80];
     struct sockaddr_in servaddr;
     char buff[4096];
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
@@ -56,6 +55,11 @@ int main() {
                 exit(1);
             }
         }
+        time(&rawtime);
+        timeinfo=localtime(&rawtime);
+        strftime(buffer,80,"%c",timeinfo);
+        std:string response;
+        //response<<
 
         // Close the connection
         close(connfd);
