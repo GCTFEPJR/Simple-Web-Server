@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <time.h>
+#include <sstream>
 
 
 using namespace std;
@@ -16,7 +17,7 @@ int main() {
     int listenfd,connfd;
     int numRead;
     time_t	rawtime;
-    struct tm* timeinfo
+    struct tm* timeinfo;
     char buffer[40];
     struct sockaddr_in servaddr;
     char buff[4096];
@@ -44,32 +45,39 @@ int main() {
 
     // Answer the connection
     for (;;) {
+        printf("for(;;)");
         // Accept the connection
-        if ((connfd = accept(listenfd, (struct sockaddr*) NULL, NULL)) < 0) {
-            perror("accept errror");
+        if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) < 0) {
+            perror("accept error");
             exit(1);
         }
-        while ((numRead = read(connfd,buff,4096)) > 0){
+        while ((numRead = read(connfd, buff, 4096)) > 0) {
             if (write(STDOUT_FILENO, buff, numRead) != numRead) {
                 perror("write error");
                 exit(1);
             }
         }
         time(&rawtime);
-        timeinfo=localtime(&rawtime);
-        strftime(buffer, sizeof(buffer),"%c",timeinfo);
-        std:string response;
+        timeinfo = localtime(&rawtime);
+        strftime(buffer, sizeof(buffer), "%c", timeinfo);
+        std::stringstream response;
         response << "HTTP/1.1 200 OK" << std::endl
-            << "Date: " << buffer << std::endl
-            << "Server: Sws" << std::endl
-            << "Accept-Ranges: bytes" << std::endl
-            << "Content-Length: 7" << std::endl
-            << "Content-Type: text/plain" << std::endl
-            << std::endl
-            << "Hellow";
+        << "Date: " << buffer << std::endl
+        << "Server: Sws" << std::endl
+        << "Accept-Ranges: bytes" << std::endl
+        << "Content-Length: 7" << std::endl
+        << "Content-Type: text/plain" << std::endl
+        << std::endl
+        << "Hellow";
 
-        write(connfd,response.c_str(),response.size());
+        std::string toto;
+        response >> toto;
 
+        if (write(connfd, toto.c_str(), toto.size()) == -1){
+            printf("send");
+        }else {
+            printf("ök");
+        }
 
         // Close the connection
         close(connfd);
