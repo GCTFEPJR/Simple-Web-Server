@@ -42,44 +42,50 @@ int main() {
         perror("listen");
         exit(1);
     }
+    printf("-----TEST------");
 
     // Answer the connection
     for (;;) {
-        printf("for(;;)");
         // Accept the connection
         if ((connfd = accept(listenfd, (struct sockaddr *) NULL, NULL)) < 0) {
             perror("accept error");
             exit(1);
         }
-        while ((numRead = read(connfd, buff, 4096)) > 0) {
+        /*while ((*/numRead = read(connfd, buff, 4096);/*) > 0) {*/
             if (write(STDOUT_FILENO, buff, numRead) != numRead) {
                 perror("write error");
                 exit(1);
             }
-        }
+        //}
+
+
         time(&rawtime);
         timeinfo = localtime(&rawtime);
         strftime(buffer, sizeof(buffer), "%c", timeinfo);
-        std::stringstream response;
-        response << "HTTP/1.1 200 OK" << std::endl
-        << "Date: " << buffer << std::endl
-        << "Server: Sws" << std::endl
-        << "Accept-Ranges: bytes" << std::endl
-        << "Content-Length: 7" << std::endl
-        << "Content-Type: text/plain" << std::endl
+        std::stringstream headerResponse;
+        std::string payload;
+        payload = "Maman ta mere";
+        headerResponse << "HTTP/1.1 200 OK\r" << std::endl
+        << "Date: " << buffer << "\r" << std::endl
+        << "Server: Sws\r" << std::endl
+        << "Accept-Ranges: bytes\r" << std::endl
+        << "Content-Length: "<<payload.length()<<"\r" << std::endl
+        << "Content-Type: text/plain\r" << std::endl
         << std::endl
-        << "Hellow";
+        << payload << "\r";/**/
 
-        std::string toto;
-        response >> toto;
+        std::string toto = headerResponse.str();
 
         if (write(connfd, toto.c_str(), toto.size()) == -1){
-            printf("send");
+            printf("pb");
         }else {
-            printf("ök");
+            printf("ok");
         }
 
         // Close the connection
         close(connfd);
+        exit(0);
     }
+
+
 }
