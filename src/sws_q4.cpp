@@ -9,7 +9,7 @@
 #include <stdlib.h>
 #include <time.h>
 #include <sstream>
-
+#include <vector>
 
 using namespace std;
 
@@ -37,7 +37,7 @@ int main() {
         exit(1);
     }
 
-    // Listen to a possible connnection to the given port
+    // Listen to a possible connnexion to the given port
     if (listen(listenfd, 1024) < 0) {
         perror("listen");
         exit(1);
@@ -58,12 +58,52 @@ int main() {
         //}
 
 
+        string str(buff);
+        string delimiter = " ";
+
+
+        size_t pos = 0;
+        std::string token;
+        vector<string> result;
+        while ((pos = str.find(delimiter)) != std::string::npos) {
+            token = str.substr(0, pos);
+            result.push_back(token);
+            str.erase(0, pos + delimiter.length());
+        }
+
+        string filepath = "/srv/www/SimpleWebServer" + result.at(1);
+
+
+        if(!(filepath.substr(filepath.find_last_of(".") + 1) == "html")) {
+            filepath.append("index.html");
+        }
+
+        cout << "opening file :" << filepath << endl;
+
+        stringstream payloadStream;
+        FILE *f = fopen(filepath.c_str(),"r");
+
+        char buff[50];
+        if( f != NULL){
+            cout << "file found" << endl;
+            while(fgets(buff, sizeof(buff),f) != NULL){
+                string line(buff);
+                cout << line << endl;
+                payloadStream << line;
+
+            }
+
+        } else{
+            cout << "file NOT found" << endl;
+        }
+        fclose(f);
+
+        
+        string payload = payloadStream.str();
         time(&rawtime);
         timeinfo = localtime(&rawtime);
         strftime(buffer, sizeof(buffer), "%c", timeinfo);
         std::stringstream headerResponse;
-        std::string payload;
-        payload = "<html><body><h1>Maman C'est fini</h1></body></html>";
         headerResponse << "HTTP/1.1 200 OK\r" << std::endl
         << "Date: " << buffer << "\r" << std::endl
         << "Server: Sws\r" << std::endl
@@ -75,6 +115,7 @@ int main() {
 
         std::string toto = headerResponse.str();
 
+
         if (write(connfd, toto.c_str(), toto.size()) == -1){
             printf("pb");
         }else {
@@ -83,6 +124,7 @@ int main() {
 
         // Close the connection
         close(connfd);
+
         exit(0);
     }
 
