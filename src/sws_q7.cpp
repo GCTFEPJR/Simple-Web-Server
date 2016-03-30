@@ -8,18 +8,35 @@
 #include <string>
 #include <iostream>
 #include <sstream>
+#include <list>
+#include <complex>
 
 #include "inet_socket.c"
 
 #define BUFFER_SIZE 4096
 #define EPOLL_SIZE 10
 #define MAX_EVENTS 10
+#define TIMEOUT 5
+
+typedef struct fdTimer {
+    int fd;
+    time_t time;
+} fdTimer;
+
+bool testDiff(struct fdTimer fdt) {
+    time_t rawtime;
+    time(&rawtime);
+
+    return (std::fabs((long long) difftime(fdt.time, rawtime))) > TIMEOUT;
+}
 
 int main() {
     time_t	rawtime;
     struct tm* timeinfo;
     int listen_fd = inetListen("8080", 5, NULL);
     int flags = fcntl(STDIN_FILENO, F_GETFL);
+    int currentfdTimerSize = 0;
+    std::list<fdTimer>* fds = new std::list<fdTimer>();
 
     if (listen_fd == -1) {
         exit(EXIT_FAILURE);
@@ -61,7 +78,21 @@ int main() {
     char x = 0;
 
     while (x != 'q') {
-        int nb_fd_ready = epoll_wait(epfd, evlist, MAX_EVENTS, -1);
+        time(&rawtime);
+        rawtime = time(NULL);
+
+        for (std::list<fdTimer>::iterator it=fds->begin(); it != fds->end(); ++it) {
+            if ((std::fabs((long long) difftime((*it).time, rawtime))) > TIMEOUT) {
+                close((*it).fd);
+                std::string info = "CLOSING FD AFTER TIMEOUT.";
+                std::cout << info << std::endl;
+                epoll_ctl(epfd, EPOLL_CTL_DEL, (*it).fd, NULL);
+
+            }
+        }
+
+        fds->remove_if(testDiff);
+        int nb_fd_ready = epoll_wait(epfd, evlist, MAX_EVENTS, 100);
 
         if (nb_fd_ready == -1) {
             if (errno == EINTR) {
@@ -80,6 +111,12 @@ int main() {
             } else if (fd == listen_fd) {
                 int client_fd = accept(listen_fd, NULL, NULL);
 
+                // Adding the local time to the fd
+                fdTimer newTimer;
+                newTimer.fd = client_fd;
+                time(&newTimer.time);
+                fds->push_back(newTimer);
+
                 if (client_fd == -1 && errno != EWOULDBLOCK) {
                     exit(EXIT_FAILURE);
                 }
@@ -87,7 +124,7 @@ int main() {
                 if (client_fd != -1) {
                     printf("Accept a new connection...\n");
                     flags = fcntl(client_fd, F_GETFL);
-                    if (fcntl(client_fd, F_SETFL, flags|O_NONBLOCK) == -1) {
+                    if (fcntl(client_fd, F_SETFL, flags) == -1) {
                         close(client_fd);
                     } else {
                         ev.data.fd = client_fd;
