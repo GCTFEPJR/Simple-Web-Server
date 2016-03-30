@@ -13,7 +13,7 @@
 
 using namespace std;
 
-int main() {
+int main(int argc, char *argv[]) {
     int listenfd,connfd;
     int numRead;
     time_t	rawtime;
@@ -21,6 +21,14 @@ int main() {
     char buffer[40];
     struct sockaddr_in servaddr;
     char buff[4096];
+
+    if (argc < 2) {
+        fprintf(stderr, "usage: ./SimpleWebServer [serverFolder]\n");
+        exit(EXIT_FAILURE);
+    }
+
+    string rootDocument(argv[1]);
+
     if ((listenfd = socket(AF_INET, SOCK_STREAM, 0)) < 0) {
         perror("Socket error");
         exit(1);
