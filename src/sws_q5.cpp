@@ -1,13 +1,9 @@
 #include <iostream>
-#include <stdio.h>
-#include <sys/types.h>
 #include <sys/socket.h>
 #include <string.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <unistd.h>
-#include <stdlib.h>
-#include <time.h>
 #include <sstream>
 #include <vector>
 
@@ -65,6 +61,7 @@ int main() {
         size_t pos = 0;
         std::string token;
         vector<string> result;
+
         while ((pos = str.find(delimiter)) != std::string::npos) {
             token = str.substr(0, pos);
             result.push_back(token);
@@ -84,6 +81,9 @@ int main() {
         FILE *f = fopen(filepath.c_str(),"r");
 
         char buff[50];
+
+        std::stringstream headerResponse;
+
         if( f != NULL){
             cout << "file found" << endl;
             while(fgets(buff, sizeof(buff),f) != NULL){
@@ -93,8 +93,12 @@ int main() {
 
             }
 
+            headerResponse << "HTTP/1.1 200 OK\r" << std::endl;
+
         } else{
             cout << "file NOT found" << endl;
+            payloadStream << "<html><body><h1><center>404 Not Found</center></h1></body></html>";
+            headerResponse << "HTTP/1.1 404 Not Found\r" << std::endl;
         }
         fclose(f);
 
@@ -103,9 +107,8 @@ int main() {
         time(&rawtime);
         timeinfo = localtime(&rawtime);
         strftime(buffer, sizeof(buffer), "%c", timeinfo);
-        std::stringstream headerResponse;
-        headerResponse << "HTTP/1.1 200 OK\r" << std::endl
-        << "Date: " << buffer << "\r" << std::endl
+
+        headerResponse << "Date: " << buffer << "\r" << std::endl
         << "Server: Sws\r" << std::endl
         << "Accept-Ranges: bytes\r" << std::endl
         << "Content-Length: "<<payload.length()<<"\r" << std::endl
