@@ -92,11 +92,10 @@ int main() {
                 payloadStream << line;
 
             }
-
+            fclose(f);
         } else{
             cout << "file NOT found" << endl;
         }
-        fclose(f);
 
 
         string payload = payloadStream.str();

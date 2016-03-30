@@ -92,7 +92,7 @@ int main() {
                 payloadStream << line;
 
             }
-
+            fclose(f);
             headerResponse << "HTTP/1.1 200 OK\r" << std::endl;
 
         } else{
@@ -100,7 +100,7 @@ int main() {
             payloadStream << "<html><body><h1><center>404 Not Found</center></h1></body></html>";
             headerResponse << "HTTP/1.1 404 Not Found\r" << std::endl;
         }
-        fclose(f);
+
 
 
         string payload = payloadStream.str();
