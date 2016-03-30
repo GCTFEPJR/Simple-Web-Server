@@ -112,10 +112,10 @@ int main() {
         << std::endl
         << payload << "\r";/**/
 
-        std::string toto = headerResponse.str();
+        std::string response = headerResponse.str();
 
 
-        if (write(connfd, toto.c_str(), toto.size()) == -1){
+        if (write(connfd, response.c_str(), response.size()) == -1){
             printf("pb");
         }else {
             printf("ok");
