@@ -16,7 +16,7 @@
 #define BUFFER_SIZE 4096
 #define EPOLL_SIZE 10
 #define MAX_EVENTS 10
-#define TIMEOUT 5
+#define TIMEOUT 10
 
 using namespace std;
 
@@ -89,7 +89,6 @@ int main() {
                 std::string info = "CLOSING FD AFTER TIMEOUT.";
                 std::cout << info << std::endl;
                 epoll_ctl(epfd, EPOLL_CTL_DEL, (*it).fd, NULL);
-
             }
         }
 
@@ -136,6 +135,12 @@ int main() {
                     }
                 }
             } else {
+                for (std::list<fdTimer>::iterator it=fds->begin(); it != fds->end(); ++it) {
+                    if ((*it).fd == fd) {
+                        time(&(*it).time);
+                    }
+                }
+
                 int num_read;
                 num_read = read(fd, buffer, 4096);
                 if (write(STDOUT_FILENO, buffer, num_read) != num_read) {
@@ -157,7 +162,7 @@ int main() {
                     str.erase(0, pos + delimiter.length());
                 }
 
-                string filepath = "/srv/www/SimpleWebServer" + result.at(1);
+                string filepath = "/var/www/html" + result.at(1);
 
 
                 if(!(filepath.substr(filepath.find_last_of(".") + 1) == "html")) {
