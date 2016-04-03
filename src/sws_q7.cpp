@@ -6,39 +6,29 @@
 #include <sys/epoll.h>
 #include <sys/socket.h>
 #include <string>
-#include <iostream>
-#include <sstream>
-#include <list>
-#include <complex>
-#include <vector>
+#include <sys/timerfd.h>
+#include <map>
+
+#include "utility.cpp"
 #include "inet_socket.c"
 
-#define BUFFER_SIZE 4096
-#define EPOLL_SIZE 10
+#define BUFFER_SIZE 32768
+#define EPOLL_SIZE 20
 #define MAX_EVENTS 10
-#define TIMEOUT 10
 
 using namespace std;
 
-typedef struct fdTimer {
-    int fd;
-    time_t time;
-} fdTimer;
-
-bool testDiff(struct fdTimer fdt) {
-    time_t rawtime;
-    time(&rawtime);
-
-    return (std::fabs((long long) difftime(fdt.time, rawtime))) > TIMEOUT;
-}
-
 int main(int argc, char *argv[]) {
     time_t	rawtime;
-    struct tm* timeinfo;
     int listen_fd = inetListen("8080", 5, NULL);
     int flags = fcntl(STDIN_FILENO, F_GETFL);
-    int currentfdTimerSize = 0;
-    std::list<fdTimer>* fds = new std::list<fdTimer>();
+    struct itimerspec newValue;
+    struct itimerspec getTime;
+    struct timespec timespec;
+    std::map<int,int> timerMap;
+    timespec.tv_sec = 5;
+    timespec.tv_nsec = 0;
+    newValue.it_value = timespec;
 
     if (argc < 2) {
         fprintf(stderr, "usage: ./SimpleWebServer [serverFolder]\n");
@@ -69,7 +59,10 @@ int main(int argc, char *argv[]) {
     }
 
     struct epoll_event ev;
+    struct epoll_event timer_ev;
+
     ev.events = EPOLLIN;
+    timer_ev.events = EPOLLIN;
     ev.data.fd = listen_fd;
 
     if (epoll_ctl(epfd, EPOLL_CTL_ADD, listen_fd, &ev) == -1) {
@@ -90,16 +83,6 @@ int main(int argc, char *argv[]) {
         time(&rawtime);
         rawtime = time(NULL);
 
-        for (std::list<fdTimer>::iterator it=fds->begin(); it != fds->end(); ++it) {
-            if ((std::fabs((long long) difftime((*it).time, rawtime))) > TIMEOUT) {
-                close((*it).fd);
-                std::string info = "CLOSING FD AFTER TIMEOUT.";
-                std::cout << info << std::endl;
-                epoll_ctl(epfd, EPOLL_CTL_DEL, (*it).fd, NULL);
-            }
-        }
-
-        fds->remove_if(testDiff);
         int nb_fd_ready = epoll_wait(epfd, evlist, MAX_EVENTS, 100);
 
         if (nb_fd_ready == -1) {
@@ -117,49 +100,11 @@ int main(int argc, char *argv[]) {
                 if ((read(STDIN_FILENO, &x, 1) == 1) && (x == 'q'))
                     break;
             } else if (fd == listen_fd) {
-                int client_fd = accept(listen_fd, NULL, NULL);
-
-                // Adding the local time to the fd
-                fdTimer newTimer;
-                newTimer.fd = client_fd;
-                time(&newTimer.time);
-                fds->push_back(newTimer);
-
-                if (client_fd == -1 && errno != EWOULDBLOCK) {
-                    exit(EXIT_FAILURE);
-                }
-
-                if (client_fd != -1) {
-                    printf("Accept a new connection...\n");
-                    flags = fcntl(client_fd, F_GETFL);
-                    if (fcntl(client_fd, F_SETFL, flags) == -1) {
-                        close(client_fd);
-                    } else {
-                        ev.data.fd = client_fd;
-                        if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
-                            close(client_fd);
-                        }
-                    }
-                }
+                createClient(listen_fd, epfd, ev, timer_ev, &timerMap, newValue);
+            } else if (timerfd_gettime(fd, &getTime) == 0) {
+                closeAll(epfd, timerMap[fd], fd);
             } else {
-                for (std::list<fdTimer>::iterator it=fds->begin(); it != fds->end(); ++it) {
-                    if ((*it).fd == fd) {
-                        time(&(*it).time);
-                    }
-                }
-
-                int num_read;
-                num_read = read(fd, buffer, 4096);
-                if (write(STDOUT_FILENO, buffer, num_read) != num_read) {
-                    perror("write error");
-                    exit(1);
-                }
-
-                string response = handleRequest(buffer, rootDocument);
-
-                if (write(fd, response.c_str(), response.size()) == -1) {
-                    close(fd);
-                }
+                handleClient(epfd, fd, timerMap[fd], newValue, buffer, BUFFER_SIZE, rootDocument);
             }
         }
     }
