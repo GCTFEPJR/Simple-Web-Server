@@ -10,6 +10,13 @@
 #include <list>
 #include <complex>
 #include <vector>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/epoll.h>
+#include <sys/socket.h>
+#include <sys/timerfd.h>
+#include <map>
+
 #include "utility.h"
 
 using namespace std;

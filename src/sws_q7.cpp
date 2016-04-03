@@ -9,8 +9,8 @@
 #include <sys/timerfd.h>
 #include <map>
 
-#include "utility.cpp"
-#include "inet_socket.c"
+#include "utility.h"
+#include "inet_socket.h"
 
 #define BUFFER_SIZE 32768
 #define EPOLL_SIZE 20
@@ -35,7 +35,7 @@ int main(int argc, char *argv[]) {
         exit(EXIT_FAILURE);
     }
 
-    string rootDocument(argv[1]);
+    std::string rootDocument(argv[1]);
 
     if (listen_fd == -1) {
         exit(EXIT_FAILURE);

@@ -5,7 +5,7 @@
 #include <map>
 
 void closeAll(int epfd, int clientFd, int timerFd);
-void handleClient(int epfd, int clientFd, int timerFd, itimerspec newValue, char buffer, int bufferSize, std::string rootDocument);
+void handleClient(int epfd, int clientFd, int timerFd, itimerspec newValue, char* buffer, int bufferSize, std::string rootDocument);
 void createClient(int listen_fd, int epfd, struct epoll_event ev, struct epoll_event timer_ev, std::map<int, int>* timerMap, itimerspec newValue);
 void errExit(const char *format, ...);
 void fatal(const char *format, ...);
