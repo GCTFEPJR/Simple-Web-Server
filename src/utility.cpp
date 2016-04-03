@@ -12,15 +12,86 @@
 #include <vector>
 #include "utility.h"
 
-#define BUFFER_SIZE 4096
-
 using namespace std;
 
-string handleRequest(const char* request, string rootDocument){
+void closeAll(int epfd, int clientFd, int timerFd) {
+    if (clientFd != -1) {
+        close(clientFd);
+        epoll_ctl(epfd, EPOLL_CTL_DEL, clientFd, NULL);
+    }
 
+    if (timerFd != -1) {
+        epoll_ctl(epfd, EPOLL_CTL_DEL, timerFd, NULL);
+    }
+}
+
+void createClient(int listen_fd, int epfd, struct epoll_event ev, struct epoll_event timer_ev, std::map<int, int>* timerMap, itimerspec newValue) {
+    int client_fd = accept(listen_fd, NULL, NULL);
+    int timer_fd;
+
+    if (client_fd == -1 && errno != EWOULDBLOCK) {
+        exit(EXIT_FAILURE);
+    }
+
+    if (client_fd != -1) {
+        printf("Accept a new connection...\n");
+        int flags = fcntl(client_fd, F_GETFL);
+
+        if (fcntl(client_fd, F_SETFL, flags) == -1) {
+            close(client_fd);
+        } else {
+            ev.data.fd = client_fd;
+
+            if (epoll_ctl(epfd, EPOLL_CTL_ADD, client_fd, &ev) == -1) {
+                close(client_fd);
+            } else {
+                int flags_tfd = TFD_NONBLOCK;
+
+                if ((timer_fd = timerfd_create(CLOCK_REALTIME, flags_tfd)) < 0) {
+                    perror("timer fd error");
+                    closeAll(epfd, client_fd, -1);
+                } else {
+                    timer_ev.data.fd = timer_fd;
+                    (*timerMap)[client_fd] = timer_fd;
+                    (*timerMap)[timer_fd] = client_fd;
+
+                    if (timerfd_settime(timer_fd, 0, &newValue, NULL) < 0) {
+                        perror("time fd set time error");
+                        closeAll(epfd, client_fd, -1);
+                    } else {
+                        if (epoll_ctl(epfd, EPOLL_CTL_ADD, timer_fd, &timer_ev) == -1) {
+                            closeAll(epfd, client_fd, -1);
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+void handleClient(int epfd, int clientFd, int timerFd, itimerspec newValue, char* buffer, int bufferSize, std::string rootDocument) {
+    if (timerfd_settime(timerFd, 0, &newValue, NULL) < 0) {
+        perror("time fd set time reset error");
+        closeAll(epfd, clientFd, timerFd);
+    }
+
+    int num_read = read(clientFd, buffer, bufferSize);
+
+    if (write(STDOUT_FILENO, buffer, num_read) != num_read) {
+        perror("write error");
+        exit(1);
+    }
+
+    std::string response = handleRequest(buffer, rootDocument, bufferSize);
+
+    if (write(clientFd, response.c_str(), response.size()) == -1) {
+        closeAll(epfd, clientFd, timerFd);
+    }
+}
+
+string handleRequest(const char* request, string rootDocument, int bufferSize){
     string str(request);
     string delimiter = " ";
-
 
     size_t pos = 0;
     std::string token;
@@ -32,8 +103,11 @@ string handleRequest(const char* request, string rootDocument){
         str.erase(0, pos + delimiter.length());
     }
 
-    string filepath = rootDocument + result.at(1);
+    string filepath = rootDocument;
 
+    if (result.size() > 0) {
+        filepath += result.at(1);
+    }
 
     if(!(filepath.substr(filepath.find_last_of(".") + 1) == "html")) {
         filepath.append("/index.html");
@@ -44,7 +118,7 @@ string handleRequest(const char* request, string rootDocument){
     stringstream payloadStream;
     FILE *f = fopen(filepath.c_str(),"r");
 
-    char buff[BUFFER_SIZE];
+    char buff[bufferSize];
 
     string responseCode;
 
@@ -54,11 +128,10 @@ string handleRequest(const char* request, string rootDocument){
             string line(buff);
             cout << line << endl;
             payloadStream << line;
-
         }
+
         fclose(f);
         responseCode = "HTTP/1.1 200 OK\r";
-
     } else{
         cout << "file NOT found" << endl;
         payloadStream << "<html><body><h1><center>404 Not Found</center></h1></body></html>";
@@ -67,13 +140,13 @@ string handleRequest(const char* request, string rootDocument){
 
     string payload = payloadStream.str();
 
-    return buildResponse(payload, responseCode);
+    return buildResponse(payload, responseCode, bufferSize);
 
 }
 
-string buildResponse(string payload, string responseCode){
+string buildResponse(string payload, string responseCode, int bufferSize){
 
-    char buffer[BUFFER_SIZE];
+    char buffer[bufferSize];
     time_t	rawtime;
     struct tm* timeinfo;
     std::stringstream headerResponse;
