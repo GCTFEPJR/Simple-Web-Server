@@ -47,5 +47,5 @@ NOTES --------------------------------------------------------------------------
 Please read the following notes:
 	> sws_q7.cpp has been entirely refactored, using the 
 	functions in inet_socket.cpp and utility.cpp
-	> The program(s) DOES NOT seems to work on the 5.3.1 (or 
+	> The programs DO NOT seems to work on the 5.3.1 (or 
 		higher) version of g++
