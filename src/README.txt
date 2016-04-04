@@ -43,6 +43,7 @@ LINUX, COMPILER VERSIONS & CODING STYLE ----------------------------------------
 		Our program(s) are written following the camelCase coding style
 
 USAGE -----------------------------------------------------------------------------------
+	
 	> sws_q2 & sws_q3:
 		>> From question 2 to 3 (sws_q{2..3}), the programs work as following:
 			>>> ./sws_qX
