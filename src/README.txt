@@ -49,7 +49,7 @@ USAGE --------------------------------------------------------------------------
 		>> You have to open your web browser and go on http://localhost:8080/
 	> FROM sws_q4 TO sws_q7:
 		>> From question 4 to 7 (sws_q{4..7}), the programs work as following:
-			>>> ./sws_qX /path/to/your/root/directory/of/your/server
+			>>> ./sws_qX /path/to/the/root/directory/of/your/server
 		>> Then, like sws_q{2..3}, you have to go on http://localhost:8080/
 
 NOTES -----------------------------------------------------------------------------------
